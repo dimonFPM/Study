@@ -272,7 +272,7 @@ def sterg():
 l1 = Label(root, text="ВЫБЕРЕТЕ ВИД ВЫЧИСЛЕНИЙ:")
 l1.pack(side=TOP)
 
-buttonBalka = Button(root, text="Прогибы балки", width=20, command=balka)
+buttonBalka = Button(root, text="Прогибы балки", width=20)
 buttonBalka.pack(side=TOP)
 buttonSterg = Button(root, text="Стержень", width=20)
 buttonSterg.pack(side=TOP)
