@@ -274,7 +274,7 @@ l1.pack(side=TOP)
 
 buttonBalka = Button(root, text="Прогибы балки", width=20, command=balka)
 buttonBalka.pack(side=TOP)
-buttonSterg = Button(root, text="Стержень", width=20, command=sterg)
+buttonSterg = Button(root, text="Стержень", width=20)
 buttonSterg.pack(side=TOP)
 l = []
 lx = []
