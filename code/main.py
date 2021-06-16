@@ -13,7 +13,7 @@ root.geometry("200x100+100+100")
 root.resizable(False, False)
 
 
-#region балка
+# region балка
 def balka():
     root1 = Toplevel()
     root1.title("Моделирование фундамента")
@@ -507,9 +507,11 @@ def balka():
     # ly = []
 
     root1.mainloop()
-#endregion
 
-#region стержень
+
+# endregion
+
+# region стержень
 def sterg():
     root2 = Toplevel()
     root2.title("Моделирование стержня")
@@ -745,7 +747,7 @@ def sterg():
                 anim.save("C:/Users/dimon/Pycharm/код/анимация/{}.gif".format(date), writer='imagemagick')
         plt.show()
 
-    #отрисовка интерфеса данного окна
+    # отрисовка интерфеса данного окна
     q1 = Canvas(root2, width=430, height=400, bg="white")
     q1.grid(row=0, column=0, rowspan=8, columnspan=10)
     q1.create_rectangle(2, 2, 431, 401)
@@ -874,14 +876,16 @@ def sterg():
     ch1 = Checkbutton(root2, text="Анимация", variable=r_var1, onvalue=1, offvalue=0)
     ch1.grid(row=9, column=10, sticky=W)
     root2.mainloop()
-#endregion
+
+
+# endregion
 
 l1 = Label(root, text="ВЫБЕРЕТЕ ВИД ВЫЧИСЛЕНИЙ:")
 l1.pack(side=TOP)
 
-buttonBalka = Button(root, text="Прогибы балки", width=20, command=balka())
+buttonBalka = Button(root, text="Прогибы балки", width=20, command=balka)
 buttonBalka.pack(side=TOP)
-buttonSterg = Button(root, text="Стержень", width=20, comand=sterg())
+buttonSterg = Button(root, text="Стержень", width=20, command=sterg)
 buttonSterg.pack(side=TOP)
 l = []
 lx = []
