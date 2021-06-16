@@ -1,5 +1,11 @@
 from tkinter import *
-
+import math as m
+import matplotlib.pyplot as plt
+from tkinter import messagebox as mbox
+import numpy as np
+import cmath as cm
+from celluloid import Camera
+import datetime as dt
 
 root = Tk()
 root.title("ДС")
@@ -13,6 +19,364 @@ def balka():
     root1.title("Моделирование фундамента")
     root1.geometry("730x560+310+20")
     root1.resizable(False, False)
+
+    def f(x):
+        s = r_var.get()
+        if s == 1:
+            return m.cos(x)
+        elif (s == 0) or (s == 2):
+            return m.tan(x) + m.tanh(x)
+
+    def v2(x, y):
+        s = (f(y) - f(x)) / (y - x)
+        return s
+
+    def v3(y0, y1, y2):
+        s = (v2(y1, y2) - v2(y0, y1)) / (y2 - y0)
+        return s
+
+    def find(eps, x0, x1, x2):
+        s = f(x0)
+        s1 = f(x2)
+        while True:
+            w = v2(x1, x2) + (x2 - x1) * v3(x0, x1, x2)
+            if s > s1:
+                xn = x2 - (2 * f(x2)) / (w - m.sqrt(w * w - 4 * f(x2) * v3(x0, x1, x2)))
+            elif s < s1:
+                xn = x2 - (2 * f(x2)) / (w + m.sqrt(w * w - 4 * f(x2) * v3(x0, x1, x2)))
+            if (abs(xn - x2) < eps) and (f(xn) < eps):
+                return xn
+            x0 = x1
+            x1 = x2
+            x2 = xn
+
+    def tableBalka():  # обработчик кнопки рассчитать
+        s = r_var.get()  # граниное условие
+        s1 = r_var1.get()  # вид нагрузки
+        eps = float(t_e.get())  # точность
+        shag = 0.00001
+        x = 110
+        q1.delete("txt")
+        global l
+        global lx
+        global ly
+        l = list(l)
+        ly = list(ly)
+        lx.clear()
+        ly.clear()
+        l.clear()
+        check = 0
+        try:
+            a_2 = float(a_e.get())  # полуширина балки
+            if s != 1:  # заполнение таблицы
+                for j in range(5):
+                    i = 0
+                    gr = 0
+                    y = 80
+                    sc = False
+                    while i < 10:
+                        if f(gr) * f(gr + shag) < 0:
+                            if sc == True:
+                                v = find(0.0001, gr, gr + shag / 2, gr + shag) / (j + 1)
+                                v = float("{0:.3f}".format(v))
+                                q1.create_text(x, y, text=str(v), font="Arial 10", tag="txt")
+                                i += 1
+                                y += 33
+                                sc = False
+                            else:
+                                sc = True
+                        gr += shag
+                    x += 70
+                gr = 0
+                y = 80
+                i = 0
+                sc = False
+                while i < 100:  # заполнение списка
+                    if f(gr) * f(gr + shag) < 0:
+                        if sc == True:
+                            v = find(0.0001, gr, gr + shag / 2, gr + shag) / a_2  #
+                            v = float("{0:.3f}".format(v))
+                            l.append(v)
+                            if i < 10:
+                                q1.create_text(455, y, text=str(v), font="Arial 10", tag="txt")
+                                y += 33
+                            i += 1
+                            sc = False
+                        else:
+                            sc = True
+                    gr += shag
+            elif s == 1:  # заполнение таблицы
+                for j in range(5):
+                    i = 0
+                    gr = 0
+                    y = 80
+                    while i < 10:
+                        if f(gr) * f(gr + shag) < 0:
+                            v = find(0.0001, gr, gr + shag / 2, gr + shag) / (j + 1)
+                            v = float("{0:.3f}".format(v))
+                            q1.create_text(x, y, text=str(v), font="Arial 10", tag="txt")
+                            i += 1
+                            y += 33
+                        gr += shag
+                    x += 70
+                gr = 0
+                y = 80
+                i = 0
+                while i < 100:  # заполнение списка
+                    if f(gr) * f(gr + shag) < 0:
+                        v = find(0.0001, gr, gr + shag / 2, gr + shag) / a_2  #
+                        v = float("{0:.3f}".format(v))
+                        l.append(v)
+                        if i < 10:
+                            q1.create_text(455, y, text=str(v), font="Arial 10", tag="txt")
+                            y += 33
+                        i += 1
+                    gr += shag
+            if s == 1:  # шарнирное опирание краёв балки
+                x = 0
+                if s1 == 0:  # первое граничное
+                    while x <= a_2:
+                        sm = 0
+                        size_tec = 0
+                        size_pr = 0
+                        lx.append(x)
+                        for k in range(100):
+                            size_pr = size_tec
+                            ch = ((-1) ** (k + 2)) * m.cos(x * l[k])
+                            zn = ((float(e_e.get()) * float(j_e.get()) * l[k] ** 4) - (
+                                    float(m_e.get()) * float(w_e.get()) ** 2) + float(k_e.get())) * l[k]
+                            size_tec = ch / zn
+                            if abs(size_tec - size_pr) < eps:
+                                break
+                            sm += ch / zn
+                        else:
+                            print("заданная точность не достигнута,увеличьте количество членов ряда")
+                        sm = sm * 2 / a_2
+                        ly.append(sm)
+                        x += a_2 / 1000
+
+                    ly = np.array(ly)
+                    ###########################анимация
+                    if r_var2.get() == 1:
+                        lyy = ly  # сохранение ly для нулевого временного параметра
+                    ###########################
+                    ly = ly * cm.exp(float(time_e.get()) * float(w_e.get()) * complex(0, -1))
+                    ly = ly.real
+
+                elif s1 == 1:  # второе граничное
+                    while x <= a_2:
+                        sm = 0
+                        size_tec = 0
+                        size_pr = 0
+                        lx.append(x)
+                        for k in range(100):
+                            size_pr = size_tec
+                            ch = ((-1) ** (k + 2)) * ((a_2 ** 2) * (l[k] ** 2) - 2) * m.cos(x * l[k])
+                            zn = ((float(e_e.get()) * float(j_e.get()) * l[k] ** 4) - (
+                                    float(m_e.get()) * float(w_e.get()) ** 2) + float(k_e.get())) * l[k] ** 3
+                            size_tec = ch / zn
+                            if abs(size_tec - size_pr) < eps:
+                                break
+                            sm += ch / zn
+                        else:
+                            print("заданная точность не достигнута,увеличьте количество членов ряда")
+                        sm = sm * 2 / a_2
+                        ly.append(sm)
+                        x += a_2 / 1000
+
+                    ly = np.array(ly)
+                    ###########################анимация
+                    if r_var2.get() == 1:
+                        lyy = ly  # сохранение ly для нулевого временного параметра
+                    ###########################
+                    ly = ly * cm.exp(float(time_e.get()) * float(w_e.get()) * complex(0, -1))
+                    ly = ly.real
+
+            elif s == 0:  # жёсткая заделка краёв балки
+                x = 0
+                if s1 == 0:  # первое граничное
+                    while x <= a_2:
+                        sm = 0
+                        size_tec = 0
+                        size_pr = 0
+                        lx.append(x)
+                        for k in range(100):
+                            size_pr = size_tec
+                            ch = (m.tanh(a_2 * l[k]) / l[k]) * (
+                                    m.cosh(x * l[k]) / m.cosh(a_2 * l[k]) - m.cos(x * l[k]) / m.cos(a_2 * l[k]))
+                            zn = ((float(e_e.get()) * float(j_e.get()) * l[k] ** 4) - (
+                                    float(m_e.get()) * float(w_e.get()) ** 2) + float(k_e.get())) * (
+                                         a_2 / ((m.cosh(a_2 * l[k])) ** 2) + a_2 / ((m.cos(
+                                     a_2 * l[k])) ** 2))
+                            size_tec = ch / zn
+                            if abs(size_tec - size_pr) < eps:
+                                break
+                            sm += ch / zn
+                        else:
+                            print("заданная точность не достигнута,увеличьте количество членов ряда")
+                        ly.append(sm)
+                        x += a_2 / 1000
+
+                    ly = np.array(ly)
+                    ###########################анимация
+                    if r_var2.get() == 1:
+                        lyy = ly  # сохранение ly для нулевого временного параметра
+                    ###########################
+                    ly = ly * cm.exp(float(time_e.get()) * float(w_e.get()) * complex(0, -1))
+                    ly = ly.real
+
+                elif s1 == 1:  # второе граничное
+                    while x <= a_2:
+                        sm = 0
+                        size_tec = 0
+                        size_pr = 0
+                        lx.append(x)
+                        for k in range(100):
+                            size_pr = size_tec
+                            ch = ((-8 * a_2 / l[k] ** 2) + (4 * a_2 ** 2 * m.tanh(a_2 * l[k]) / l[k])) * (
+                                    m.cosh(x * l[k]) / m.cosh(a_2 * l[k]) - m.cos(x * l[k]) / m.cos(a_2 * l[k]))
+                            zn = ((float(e_e.get()) * float(j_e.get()) * l[k] ** 4) - (
+                                    float(m_e.get()) * float(w_e.get()) ** 2) + float(k_e.get())) * (
+                                         a_2 / ((m.cosh(a_2 * l[k])) ** 2) + a_2 / ((m.cos(
+                                     a_2 * l[k])) ** 2))
+                            size_tec = ch / zn
+                            if abs(size_tec - size_pr) < eps:
+                                break
+                            sm += ch / zn
+                        else:
+                            print("заданная точность не достигнута,увеличьте количество членов ряда")
+                        ly.append(sm)
+                        x += a_2 / 1000
+
+                    ly = np.array(ly)
+                    ###########################анимация
+                    if r_var2.get() == 1:
+                        lyy = ly  # сохранение ly для нулевого временного параметра
+                    ###########################
+                    ly = ly * cm.exp(float(time_e.get()) * float(w_e.get()) * complex(0, -1))
+                    ly = ly.real
+
+            elif s == 2:  # свободное операние
+                x = 0
+                if s1 == 0:  # равномерно распределённая нагрузка
+                    while x <= a_2:
+                        sm = 0
+                        size_tec = 0
+                        size_pr = 0
+                        lx.append(x)
+                        for k in range(100):
+                            size_pr = size_tec
+                            ch = 1
+                            zn = float(k_e.get()) - float(m_e.get()) * float(w_e.get()) ** 2
+                            size_tec = ch / zn
+                            if abs(size_tec - size_pr) < eps:
+                                break
+                            sm += ch / zn
+                        else:
+                            print("заданная точность не достигнута,увеличьте количество членов ряда")
+                        ly.append(sm)
+                        x += a_2 / 1000
+
+                    ly = np.array(ly)
+                    ###########################анимация
+                    if r_var2.get() == 1:
+                        lyy = ly  # сохранение ly для нулевого временного параметра
+                    ###########################
+                    ly = ly * cm.exp(float(time_e.get()) * float(w_e.get()) * complex(0, -1))
+                    ly = ly.real
+
+                elif s1 == 1:  # параболически распределённая нагрузка
+                    while x <= a_2:
+                        sm = 0
+                        size_tec = 0
+                        size_pr = 0
+                        lx.append(x)
+                        for k in range(100):
+                            size_pr = size_tec
+                            ch = ((8 / (l[k] ** 3)) * (m.tanh(l[k] * a_2))) * (
+                                (m.cosh(l[k] * x) / m.cosh(l[k] * a_2) + m.cos(l[k] * x) / m.cos(l[k] * a_2)))
+                            zn = ((float(e_e.get()) * float(j_e.get()) * l[k] ** 4) - (
+                                    float(m_e.get()) * float(w_e.get()) ** 2) + float(k_e.get())) * (
+                                         a_2 / ((m.cosh(a_2 * l[k])) ** 2) + a_2 / ((m.cos(a_2 * l[k])) ** 2))
+                            size_tec = ch / zn
+                            if abs(size_tec - size_pr) < eps:
+                                break
+                            sm += ch / zn
+                        else:
+                            print("заданная точность не достигнута,увеличьте количество членов ряда")
+                        sm = sm + (a_2 ** 2) / (3 * (float(k_e.get()) - float(m_e.get()) * float(w_e.get())))
+                        ly.append(sm)
+                        x += a_2 / 1000
+
+                    ly = np.array(ly)
+                    ###########################анимация
+                    if r_var2.get() == 1:
+                        lyy = ly  # сохранение ly для нулевого временного параметра
+                    ###########################
+                    ly = ly * cm.exp(float(time_e.get()) * float(w_e.get()) * complex(0, -1))
+                    ly = ly.real
+        except ZeroDivisionError:
+            check = 1
+            mbox.showerror("Ошибка", "Происходит деление на ноль")
+
+        if check == 0:  # отрисовка графиков
+            if s == 1:
+                titleFig = "Шарнирное опирание краёв балки."
+                if s1 == 0:
+                    titleGrafik = "Шарнирное опирание краёв балки.\nРавномерно распределённая нагрузка."
+                elif s1 == 1:
+                    titleGrafik = "Шарнирное опирание краёв балки.\nПараблически распределённая нагрузка."
+            elif s == 0:
+                titleFig = "Жёсткая заделка краёв балки."
+                if s1 == 0:
+                    titleGrafik = "Жёсткая заделка краёв балки.\nРавномерно распределённая нагрузка."
+                elif s1 == 1:
+                    titleGrafik = "Жёсткая заделка краёв балки.\nПараболически распределённая нагрузка."
+            elif s == 2:
+                titleFig = "Свободное операние балки."
+                if s1 == 0:
+                    titleGrafik = "Свободное операние балки.\nРавномерно распределённая нагрузка."
+                elif s1 == 1:
+                    titleGrafik = "Свободное операние балки.\nПараболически распределённая нагрузка."
+            if r_var2.get() == 0:  # без анимации
+                fig = plt.figure(titleFig)
+                plt.title(titleGrafik)
+                plt.grid(True)
+                plt.xlabel("Координаты точек фундамента")
+                plt.ylabel("Вертикальное смещение")
+                plt.plot(lx, ly, label="a={} w={} k={}".format(a_2, float(w_e.get()), float(k_e.get())))
+                plt.legend()
+
+            else:  # с анимацией
+                gridsize = (1, 2)
+                fig = plt.figure(titleFig, figsize=(11, 5))
+                camera = Camera(fig)
+                ax1 = plt.subplot2grid(gridsize, (0, 1))
+                plt.title("Изменения смещения со временем.")
+                plt.grid(True)
+                plt.xlabel("Координаты точек фундамента")
+                plt.ylabel("Вертикальное смещение")
+
+                ttt = np.arange(0, 50, 0.5)
+                w = float(w_e.get())
+                for timer in ttt:  # 50секунд
+                    ly2 = lyy * cm.exp(timer * w * complex(0, -1))
+                    ly2 = ly2.real
+                    pl = plt.plot(lx, ly2, color="red")
+                    plt.legend(pl, ["{}сек".format(timer)])
+                    camera.snap()
+
+                ax2 = plt.subplot2grid(gridsize, (0, 0))
+                plt.title(titleGrafik)
+                plt.grid(True)
+                plt.xlabel("Координаты точек фундамента")
+                plt.ylabel("Вертикальное смещение")
+                plt.plot(lx, ly, color="blue", label="a={} w={} k={}".format(a_2, float(w_e.get()), float(k_e.get())))
+                plt.legend()
+                anim = camera.animate()
+                date = dt.datetime.now().strftime("%d-%m-%Y-%H.%M.%S")
+                anim.save("C:/Users/dimon/Pycharm/код/анимация/{}.gif".format(date), writer='imagemagick')
+            plt.show()
 
     # Canvas
     q1 = Canvas(root1, width=495, height=400, bg="white")
@@ -138,6 +502,219 @@ def sterg():
     root2.title("Моделирование стержня")
     root2.geometry("700x560+310+20")
     root2.resizable(False, False)
+
+    def f(x):
+        ss = r_var.get()
+        s = float(s_e.get())
+        # w = float(w_e.get())
+        p = float(p_e.get())
+        e = float(e_e.get())
+        sig = m.sqrt(p / e)
+        ll = float(l_e.get())
+        ###############переменные для второго граничного условия
+        ny = float(ny_e.get())
+        a = float(a_e.get())  ##пользователь вводит ширину, а нужна полуширина
+        a = a / 2
+        h = float(h_e.get())
+        ###############
+        global mi
+        if ss == 0 and m.tan(sig * x) != 0:
+            return ((s * sig * e * ll) / (ll * m.tan(sig * x * ll))) - x * mi
+        elif ss == 1:
+            # return (((1 + mi * mi * x * x) / (x * (np.cos(x * ll) / np.sin(x * ll)) - mi * x * x)) + mi) / x ** 2
+            q = 2 * x * a * m.sqrt(p * ny / e) * (
+                    m.cos(2 * h * x * m.sqrt(p * ny / e)) / m.sin(2 * h * x * m.sqrt(p * ny / e)))
+            return e * x * sig * (q - x * x * mi) * m.cos(x * sig * ll) - x * x * (
+                    mi * q + e * e * sig) * m.sin(
+                x * sig * ll)
+
+    def v2(x, y):
+        s = (f(y) - f(x)) / (y - x)
+        return s
+
+    def v3(y0, y1, y2):
+        s = (v2(y1, y2) - v2(y0, y1)) / (y2 - y0)
+        return s
+
+    def find(eps, x0, x1, x2):
+        s = f(x0)
+        s1 = f(x2)
+        while True:
+            w = v2(x1, x2) + (x2 - x1) * v3(x0, x1, x2)
+            if s > s1:
+                xn = x2 - (2 * f(x2)) / (w - m.sqrt(w * w - 4 * f(x2) * v3(x0, x1, x2)))
+            elif s < s1:
+                xn = x2 - (2 * f(x2)) / (w + m.sqrt(w * w - 4 * f(x2) * v3(x0, x1, x2)))
+            if (abs(xn - x2) < eps) and (f(xn) < eps):
+                return xn
+            x0 = x1
+            x1 = x2
+            x2 = xn
+
+        #####################################################
+
+    def tableSterg():
+        # try:
+        global l
+        global lx
+        global ly
+        global mi  ###################################
+        l = list(l)
+        ly = list(ly)
+        lx.clear()
+        ly.clear()
+        l.clear()
+        q1.delete("txt")
+        ff = float(f_e.get())
+        w = float(w_e.get())
+        p = float(p_e.get())
+        e = float(e_e.get())
+        s = float(s_e.get())
+        ll = float(l_e.get())
+        mm = float(m_e.get())
+        time = float(time_e.get())
+
+        ###############переменные для второго граничного условия
+        ny = float(ny_e.get())
+        a = float(a_e.get())  ##пользователь вводит ширину, а нужна полуширина
+        a = a / 2
+        h = float(h_e.get())
+        ###############
+        # t = float(t_e.get())
+        ss = r_var.get()
+        lx = list(np.linspace(0, ll, 1000))
+        ly = np.zeros(1000)
+        cheek = 0
+        # ####заполнение таблицы
+        # shag = 0.00001
+        # y = 80
+        # for i in range(1, 11, 1):
+        #     mi = i
+        #     x = 110
+        #     xx = shag
+        #     if ss == 0:
+        #         sc = True  # переменная для чередования выбора частот, берёт частоты через одну, первую берёт
+        #     else:
+        #         sc = False
+        #     while len(l) < 6:
+        #         print(xx)  #####################y
+        #         print(l)  #######################y
+        #         if f(xx) * f(xx + shag) < 0:
+        #             if sc == True:
+        #                 v = find(0.0001, xx, xx + shag / 2, xx + shag)
+        #                 v = float("{0:.3f}".format(v))
+        #                 q1.create_text(x, y, text=str(v), font="Arial 10", tag="txt")
+        #                 x += 70
+        #                 sc = False
+        #                 l.append(v)  ############################y
+        #             else:
+        #                 sc = True
+        #         xx += shag
+        #     y += 33
+        #     l.clear()  ##################################y
+        # ######################
+        if ss == 0:
+            try:
+                print("жёстко закреплён")  ####################################################У
+                zn = (w * s * m.sqrt(e * p) * m.cos(w * ll * m.sqrt(p / e))) - (
+                        w * w * mm * m.sin(w * ll * m.sqrt(p / e)))
+                for i in range(len(lx)):
+                    ch = ff * m.sin(w * lx[i] * m.sqrt(p / e))
+                    ly[i] = ch / zn
+                ###########################анимация
+                if r_var1.get() == 1:
+                    lyy = ly  # сохранение ly для нулевого временного параметра
+                ###########################
+                ly = ly * cm.exp(time * w * complex(0, -1))
+                ly = ly.real
+            except ValueError:
+                mbox.showerror("Ошибка", "Отрицательное число под корнем")
+                cheek += 1
+            except ZeroDivisionError:
+                mbox.showerror("Ошибка", "Происходит деление на ноль")
+                cheek += 1
+
+        else:
+            print("не жёстко закреплён")  ####################################################У
+            try:
+                ct = m.cos(h * w * m.sqrt(p * (e / (2 * (1 - ny))) / ((1 - 2 * ny) / (2 - 2 * ny)))) / m.sin(
+                    h * w * m.sqrt(p * (e / (2 * (1 - ny))) / ((1 - 2 * ny) / (2 - 2 * ny))))
+                q = 2 * w * a * m.sqrt(p * (e / (2 * (1 - ny))) / ((1 - 2 * ny) / (2 - 2 * ny))) * ct
+                sig = m.sqrt(p / e)
+                zn = e * w * sig * (q - w * w * mm) * m.cos(w * sig * ll) - w * w * (
+                        mm * q + e * e * sig * sig) * m.sin(
+                    w * sig * ll)
+                for i in range(len(lx)):
+                    ch = ff * (e * w * sig * m.cos(w * sig * lx[i]) + q * m.sin(w * sig * lx[i]))
+                    ly[i] = ch / zn
+                ###########################анимация
+                if r_var1.get() == 1:
+                    lyy = ly  # сохранение ly для нулевого временного параметра
+                ###########################
+                ly = ly * cm.exp(time * w * complex(0, -1))
+                ly = ly.real
+            except ValueError:
+                mbox.showerror("Ошибка", "Отрицательное число под корнем")
+                cheek += 1
+            except ZeroDivisionError:
+                mbox.showerror("Ошибка", "Происходит деление на ноль")
+                cheek += 1
+
+        ###отрисовка графика
+        if cheek == 0:
+            if r_var1.get() == 0:  # без анимации
+                if ss == 0:
+                    fig = plt.figure("Стержень закреплён жёстко.")
+                    plt.title("Стержень закреплён жёстко.\nГрафик отклонения стержня.".format(time))
+                else:
+                    fig = plt.figure(
+                        "Стержень закреплён не жёстко.")  ################исправить подпись к графику
+                    plt.title("Стержень закреплён не жёстко.\nГрафик отклонения стержня.".format(
+                        time))  ################исправить подпись к графику
+
+                plt.xlabel("Координаты стержня")
+                plt.ylabel("Отклонение стержня")
+                plt.plot(lx, ly, label="{}-я секунда m={}".format(time, mm))
+                plt.grid(True)
+                plt.legend()
+            else:  # с анимацией
+                gridsize = (1, 2)
+                if ss == 0:
+                    fig = plt.figure("Стержень закреплён жёстко", figsize=(11, 5))
+                else:
+                    fig = plt.figure("Стержень закреплён не жёстко",
+                                     figsize=(11, 5))  ################исправить подпись к графику
+                camera = Camera(fig)
+
+                ax2 = plt.subplot2grid(gridsize, (0, 1))
+                plt.title("Изменение отклонения со временем")
+                plt.grid(True)
+                plt.xlabel("Координаты стержня")
+                plt.ylabel("Отклонение стержня")
+
+                ttt = np.arange(0, 50, 0.5)
+                for timer in ttt:  # 50секунд
+                    ly2 = lyy * cm.exp(timer * w * complex(0, -1))
+                    ly2 = ly2.real
+                    pl = plt.plot(lx, ly2, color="red")
+                    plt.legend(pl, ["{}-я секунда m={}".format(timer, mm)])
+                    camera.snap()
+
+                ax1 = plt.subplot2grid(gridsize, (0, 0))
+                if ss == 0:
+                    plt.title("Стержень закреплён жёстко\nграфик отклонения стержня".format(time))
+                else:
+                    plt.title("Стержень закреплён не жёстко\nграфик отклонения стержня".format(time))
+                plt.xlabel("Координаты стержня")
+                plt.ylabel("Отклонение стержня")
+                plt.plot(lx, ly, label="{}-я секунда m={}".format(time, mm), color="blue")
+                plt.grid(True)
+                plt.legend()
+                anim = camera.animate()
+
+                date = dt.datetime.now().strftime("%d-%m-%Y-%H.%M.%S")
+                anim.save("C:/Users/dimon/Pycharm/код/анимация/{}.gif".format(date), writer='imagemagick')
+        plt.show()
 
     #отрисовка интерфеса данного окна
     q1 = Canvas(root2, width=430, height=400, bg="white")
