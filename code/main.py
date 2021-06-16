@@ -20,6 +20,19 @@ def balka():
     root1.geometry("730x560+310+20")
     root1.resizable(False, False)
 
+    def clean():  # обработчик кнопки очистка
+        e_e.delete(0, END)
+        j_e.delete(0, END)
+        m_e.delete(0, END)
+        w_e.delete(0, END)
+        t_e.delete(0, END)
+        k_e.delete(0, END)
+        a_e.delete(0, END)
+        r_var.set(0)
+        r_var1.set(0)
+        q1.delete("txt")
+        # pass
+
     def f(x):
         s = r_var.get()
         if s == 1:
@@ -502,6 +515,22 @@ def sterg():
     root2.title("Моделирование стержня")
     root2.geometry("700x560+310+20")
     root2.resizable(False, False)
+
+    def clean():  # обработчик кнопки очистка
+        e_e.delete(0, END)
+        f_e.delete(0, END)
+        m_e.delete(0, END)
+        w_e.delete(0, END)
+        # t_e.delete(0, END)
+        p_e.delete(0, END)
+        s_e.delete(0, END)
+        l_e.delete(0, END)
+        time_e.delete(0, END)
+        ny_e.delete(0, END)
+        a_e.delete(0, END)
+        h_e.delete(0, END)
+        r_var.set(0)
+        q1.delete("txt")
 
     def f(x):
         ss = r_var.get()
